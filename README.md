@@ -48,13 +48,13 @@ How to use Thingsboard, and Making The Dashboard
 [Click To Show Tutorial](https://www.youtube.com/watch?v=FjvjNx1LCvQ)
 ## Screenshots
 
-![Web Screenshot](https://myiotprivate.s3.ap-southeast-1.amazonaws.com/127.0.0.1_5500_index.html+(2).png)
+![Web Screenshot](https://iotpribadi.s3.ap-southeast-1.amazonaws.com/SS_WebsitePribadi.png)
 
-![Dashboard Thingsboard Screenshot](https://myiotprivate.s3.ap-southeast-1.amazonaws.com/Screenshot+2024-12-26+172000.png)
+![Dashboard Thingsboard Screenshot](https://iotpribadi.s3.ap-southeast-1.amazonaws.com/SS_ThingsBoardPribadi.png)
 
 
 ## Support By
-![Logo](https://kelompok2iot.s3.ap-southeast-1.amazonaws.com/logo-instrumentasi-biru+(2).png)
+![Logo](https://iotkelompok2.s3.ap-southeast-1.amazonaws.com/logo-instrumentasi-biru+(2).png)
 
 
 ## License
