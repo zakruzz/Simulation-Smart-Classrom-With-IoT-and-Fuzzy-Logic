@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Realtime Sensor Data</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- Tambahkan DataTables CSS dan JS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css" />
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
+  </head>
+  <body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+      <!-- Title -->
+      <h1 class="text-3xl font-semibold text-center text-gray-800 mb-10">Realtime Sensor Data</h1>
+
+      <!-- Timestamp -->
+      <div id="timestamp-display" class="text-center text-gray-700 mb-6">Last Updated: <span id="timestamp">Loading...</span></div>
+      <div id="status-display" class="text-center text-gray-700 mb-6">Status Loading...</div>
+
+      <!-- Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700">HCSR</h2>
+          <p id="hcsr" class="text-xl text-gray-600">Loading...</p>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700">Flame</h2>
+          <p id="flame" class="text-xl text-gray-600">Loading...</p>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700">LDR</h2>
+          <p id="ldr" class="text-md text-gray-600">Loading...</p>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700">DHT22</h2>
+          <p id="dht22-temp" class="text-md text-gray-600">Loading...</p>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700">MQ135 (CO2)</h2>
+          <p id="mq135" class="text-xl text-gray-600">Loading...</p>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700 mb-4">HCSR</h2>
+          <canvas id="hcsrChart" class="h-64"></canvas>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700 mb-4">Flame</h2>
+          <canvas id="flameChart" class="h-64"></canvas>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700 mb-4">LDR</h2>
+          <canvas id="ldrChart" class="h-64"></canvas>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700 mb-4">DHT22 Temperature</h2>
+          <canvas id="dht22Chart" class="h-64"></canvas>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700 mb-4">MQ135 CO2</h2>
+          <canvas id="mq135Chart" class="h-64"></canvas>
+        </div>
+      </div>
+
+      <!-- Combined Chart -->
+      <div class="bg-white shadow-md rounded-lg p-6 mt-10">
+        <h2 class="text-lg font-semibold text-gray-700 mb-4">Combined Sensor Data</h2>
+        <canvas id="combinedChart" class="h-64"></canvas>
+      </div>
+
+      <!-- Combined Table with Pagination -->
+      <div class="bg-white shadow-md rounded-lg p-6 mt-10">
+        <h2 class="text-lg font-semibold text-gray-700 mb-4">Combined Data Table</h2>
+        <table id="combinedTable" class="w-full text-sm text-left text-gray-500 mt-4 border-collapse border border-gray-300">
+          <thead class="bg-gray-200">
+            <tr>
+              <th class="border border-gray-300 px-4 py-2">Timestamp</th>
+              <th class="border border-gray-300 px-4 py-2">HCSR (CM)</th>
+              <th class="border border-gray-300 px-4 py-2">Flame</th>
+              <th class="border border-gray-300 px-4 py-2">LDR</th>
+              <th class="border border-gray-300 px-4 py-2">DHT22 Temp (°C)</th>
+              <th class="border border-gray-300 px-4 py-2">CO2 (ppm)</th>
+            </tr>
+          </thead>
+          <tbody id="combinedTableBody"></tbody>
+        </table>
+        <button id="downloadCsv" class="mt-4 px-4 py-2 bg-gray-400 text-white rounded cursor-not-allowed" disabled>Download CSV</button>
+      </div>
+    </div>
+
+    <script>
+      function showNotification() {
+        if (!('Notification' in window)) {
+          alert('Browser Anda tidak mendukung Notifications API.');
+          return;
+        }
+
+        Notification.requestPermission().then((permission) => {
+          if (permission === 'granted') {
+            const notification = new Notification('Peringatan Bahaya!', {
+              body: 'Klik untuk menghubungi WhatsApp',
+              icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/1200px-WhatsApp.svg.png',
+            });
+
+            notification.onclick = () => {
+              window.open('https://wa.me/081331058501', '_blank');
+            };
+          }
+        });
+      }
+
+      const S3_BUCKET_URL = 'https://myiotprivate.s3.ap-southeast-1.amazonaws.com/myValue.json';
+
+      // Data Chart
+      let hcsrChartData = {
+        labels: [],
+        datasets: [
+          {
+            label: 'HCSR (CM)', // Change the label to reflect pressure
+            data: [],
+            borderColor: 'rgba(255, 99, 132, 1)',
+            fill: false,
+          },
+        ],
+      };
+      let flameChartData = { labels: [], datasets: [{ label: 'Flame', data: [], borderColor: 'rgba(54, 162, 235, 1)', fill: false }] };
+      let ldrChartData = { labels: [], datasets: [{ label: 'LDR', data: [], borderColor: 'rgba(54, 162, 235, 1)', fill: false }] };
+      let dht22ChartData = {
+        labels: [],
+        datasets: [{ label: 'DHT22 Temp (°C)', data: [], borderColor: 'rgba(255, 206, 86, 1)', fill: false }],
+      };
+      let mq135ChartData = {
+        labels: [],
+        datasets: [{ label: 'CO2 (ppm)', data: [], borderColor: 'rgba(255, 159, 64, 1)', fill: false }],
+      };
+      let combinedChartData = {
+        labels: [],
+        datasets: [
+          { label: 'HCSR (CM)', data: [], borderColor: 'rgba(255, 99, 132, 1)', fill: false },
+          { label: 'Flame', data: [], borderColor: 'rgba(54, 162, 235, 1)', fill: false },
+          { label: 'LDR', data: [], borderColor: 'rgba(75, 192, 192, 1)', fill: false },
+          { label: 'DHT22 Temp (°C)', data: [], borderColor: 'rgba(153, 102, 255, 1)', fill: false },
+          { label: 'CO2 (ppm)', data: [], borderColor: 'rgba(255, 206, 86, 1)', fill: false },
+        ],
+      };
+
+      let combinedData = [];
+
+      function fetchData() {
+        axios
+          .get(S3_BUCKET_URL)
+          .then((response) => {
+            const data = response.data;
+
+            // Log data yang diambil
+            console.log('Fetched Data:', data);
+
+            console.log(data.timestamp); // Log the value to see its format
+
+            const timestamp = new Date(data.timestamp.replace('Z', '')).toLocaleString('id-ID', {
+              timeZone: 'Asia/Jakarta', // Zona waktu Indonesia
+              hour12: false,
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            });
+            console.log(timestamp);
+
+            // Update Status
+            if (data.status.includes('KEBAKARAN')) {
+              document.getElementById('status-display').innerText = 'Status: Bahaya';
+              document.getElementById('status-display').classList.add('text-red-500'); // Warna merah
+              document.getElementById('status-display').classList.remove('text-green-500'); // Hapus warna hijau jika ada
+              showNotification();
+            } else {
+              document.getElementById('status-display').innerText = 'Status: Aman';
+              document.getElementById('status-display').classList.add('text-green-500'); // Warna hijau
+              document.getElementById('status-display').classList.remove('text-red-500'); // Hapus warna merah jika ada
+            }
+
+            // Update Timestamp
+            document.getElementById('timestamp').innerText = timestamp;
+
+            console.log('HCSR to Update:', data.hcsr);
+            document.getElementById('hcsr').innerText = `${data.hcsr.toFixed(2)} CM`;
+
+            console.log('Flame to Update:', data.flame);
+            document.getElementById('flame').innerText = `${data.flame ? 'Detected' : 'Not Detected'}`;
+
+            console.log('LDR to Update:', data.ldr);
+            document.getElementById('ldr').innerText = `${data.ldr ? 'Detected' : 'Not Detected'}`;
+
+            console.log('DHT22 Temp to Update:', data.dhtTemp);
+            document.getElementById('dht22-temp').innerText = `${data.dhtTemp.toFixed(2)}°C`;
+
+            console.log('MQ135 CO2 to Update:', data.co2);
+            document.getElementById('mq135').innerText = `${data.co2.toFixed(2)} ppm`;
+
+            // Update Charts
+            updateChart(hcsrChart, hcsrChartData, data.hcsr, timestamp);
+            updateChart(flameChart, flameChartData, data.flame, timestamp);
+            updateChart(ldrChart, ldrChartData, data.ldr, timestamp);
+            updateChart(dht22Chart, dht22ChartData, data.dhtTemp, timestamp);
+            updateChart(mq135Chart, mq135ChartData, data.co2, timestamp);
+            updateChart(combinedChart, combinedChartData, [data.hcsr, data.flame, data.ldr, data.dhtTemp, data.co2], timestamp);
+
+            // Update Table
+            combinedData.push({
+              timestamp,
+              distance: data.hcsr.toFixed(2),
+              api: data.flame ? 'Detected' : 'Not Detected',
+              cahaya: data.ldr ? 'Detected' : 'Not Detected',
+              dhtTemp: data.dhtTemp.toFixed(2),
+              co2: data.co2.toFixed(2),
+            });
+            updateTable();
+            checkDownloadButton();
+          })
+          .catch((error) => {
+            console.error('Error Fetching Data:', error);
+          });
+      }
+
+      function updateChart(chart, chartData, data, timestamp) {
+        chartData.labels.push(timestamp);
+
+        if (Array.isArray(data)) {
+          data.forEach((value, index) => chartData.datasets[index].data.push(value.toFixed(2)));
+        } else {
+          chartData.datasets[0].data.push(data.toFixed(2));
+        }
+
+        if (chartData.labels.length > 20) {
+          chartData.labels.shift();
+          chartData.datasets.forEach((dataset) => dataset.data.shift());
+        }
+
+        chart.update();
+      }
+
+      function updateTable() {
+        const tableBody = document.getElementById('combinedTableBody');
+        tableBody.innerHTML = ''; // Clear table
+        combinedData.forEach((row) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+                <td class="border border-gray-300 px-4 py-2">${row.timestamp}</td>
+                <td class="border border-gray-300 px-4 py-2">${row.distance}</td>
+                <td class="border border-gray-300 px-4 py-2">${row.api}</td>
+                <td class="border border-gray-300 px-4 py-2">${row.cahaya}</td>
+                <td class="border border-gray-300 px-4 py-2">${row.dhtTemp}</td>
+                <td class="border border-gray-300 px-4 py-2">${row.co2}</td>`;
+          tableBody.appendChild(tr);
+        });
+      }
+
+      function checkDownloadButton() {
+        const downloadButton = document.getElementById('downloadCsv');
+        if (combinedData.length >= 15) {
+          downloadButton.disabled = false;
+          downloadButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+          downloadButton.classList.add('bg-blue-600');
+        } else {
+          downloadButton.disabled = true;
+          downloadButton.classList.remove('bg-blue-600');
+          downloadButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+        }
+      }
+
+      function downloadCSV() {
+        if (combinedData.length < 15) {
+          alert('You need at least 15 data entries to download!');
+          return;
+        }
+
+        let csvContent = 'data:text/csv;charset=utf-8,';
+        csvContent += 'Timestamp,HCSR (CM),Flame,LDR,DHT22 Temp (°C),CO2 (ppm)\n';
+
+        combinedData.forEach((row) => {
+          csvContent += `${row.timestamp},${row.distance},${row.api},${row.cahaya},${row.dhtTemp},${row.co2}\n`;
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', 'combined_data.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      document.getElementById('downloadCsv').addEventListener('click', downloadCSV);
+
+      const hcsrChart = new Chart(document.getElementById('hcsrChart').getContext('2d'), { type: 'line', data: hcsrChartData });
+      const flameChart = new Chart(document.getElementById('flameChart').getContext('2d'), { type: 'line', data: flameChartData });
+      const ldrChart = new Chart(document.getElementById('ldrChart').getContext('2d'), { type: 'line', data: ldrChartData });
+      const dht22Chart = new Chart(document.getElementById('dht22Chart').getContext('2d'), { type: 'line', data: dht22ChartData });
+      const mq135Chart = new Chart(document.getElementById('mq135Chart').getContext('2d'), { type: 'line', data: mq135ChartData });
+      const combinedChart = new Chart(document.getElementById('combinedChart').getContext('2d'), { type: 'line', data: combinedChartData });
+
+      setInterval(fetchData, 3000);
+      fetchData();
+    </script>
+  </body>
+</html>
